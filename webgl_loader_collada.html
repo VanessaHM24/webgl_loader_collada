@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>three.js webgl - Collada loader</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #info a { color: #fff; text-decoration: none; }
+        #info a:hover { text-decoration: underline; }
+    </style>
+    <link type="text/css" rel="stylesheet" href="main.css">
+</head>
+<body>
+    <div id="container"></div>
+    <div id="info">
+        <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> collada loader<br/>
+        Elf Girl by <a href="https://sketchfab.com/yellow09" target="_blank" rel="noopener">halloween</a>, 
+        <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC Attribution</a>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "./build/three.module.js",
+                "three/examples/jsm/": "./examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+        import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
+
+        let container, camera, scene, renderer, controls, avatar, clock;
+
+        init();
+        animate();
+
+        function init() {
+            container = document.getElementById('container');
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 5, 10); // Ajustada para ver de frente y más cerca
+            camera.lookAt(0, 2, 0); // Centrado en la altura aproximada del elfo
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xbfd1e5);
+
+            clock = new THREE.Clock();
+
+            // Loading manager
+            const loadingManager = new THREE.LoadingManager(function () {
+                scene.add(avatar);
+            });
+
+            // Collada loader
+            const loader = new ColladaLoader(loadingManager);
+            loader.load('examples/models/collada/elf/elf.dae', function (collada) {
+                avatar = collada.scene;
+                console.log('Modelo cargado:', avatar); // Depuración
+                avatar.traverse(function (child) {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        console.log('Material del mesh:', child.material); // Depuración
+                        // Fuerza un material con color si no se ve (descomenta si necesario)
+                        // child.material = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Verde para prueba
+                    }
+                });
+                avatar.scale.set(0.5, 0.5, 0.5); // Escala aumentada para que sea más grande
+                avatar.position.set(0, 0, 0); // Posición centrada
+            }, undefined, function (error) {
+                console.error('Error al cargar el modelo Collada:', error);
+            });
+
+            // Luces
+            const ambientLight = new THREE.AmbientLight(0xffffff);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
+            directionalLight.position.set(1, 1, 0).normalize();
+            scene.add(directionalLight);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setAnimationLoop(animate);
+            container.appendChild(renderer.domElement);
+
+            // Controles
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.target.set(0, 2, 0); // Ajustado para centrar en el elfo
+            controls.update();
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            render();
+            // stats.update(); // Desactivado por falta de Stats
+        }
+
+        function render() {
+            const delta = clock.getDelta();
+            if (avatar !== undefined) {
+                avatar.rotation.z += delta * 0.5; // Rotación manual como en el original
+            }
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
